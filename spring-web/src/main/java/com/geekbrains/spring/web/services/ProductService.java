@@ -1,21 +1,16 @@
 package com.geekbrains.spring.web.services;
 
 
+import com.geekbrains.spring.web.data.Cart;
 import com.geekbrains.spring.web.data.Product;
 import com.geekbrains.spring.web.dto.CreateProductDto;
 import com.geekbrains.spring.web.dto.ProductDto;
-import com.geekbrains.spring.web.exceptions.GlobalExceptionHandler;
-import com.geekbrains.spring.web.exceptions.ResourceNotFoundExeption;
 import com.geekbrains.spring.web.repositories.ProductRepository;
-import com.geekbrains.spring.web.repositories.specification.ProductSpecification;
-import javassist.NotFoundException;
+import com.geekbrains.spring.web.repositories.validate.Validator;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 
-import javax.xml.bind.ValidationException;
+import java.util.HashMap;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -24,6 +19,8 @@ import java.util.stream.Collectors;
 public class ProductService {
 
     private final ProductRepository productRepository;
+    private final Validator validator;
+    private final Cart cart;
 
 
 
@@ -31,20 +28,43 @@ public class ProductService {
         productRepository.deleteById(id);
     }
 
-    public ProductDto findById(Long id)  {
+    public com.geekbrains.spring.web.dto.ProductDto findById(Long id)  {
         List<Product> products = productRepository.findAll();
-        if (products.stream().filter(p -> p.getId() == id).findAny().isEmpty()) {
-            try {
-                throw new NotFoundException("Нет такого Id");
-            } catch (NotFoundException e) {
-                throw new RuntimeException(e);
-            }
-        }
+        validator.valideteById(id,products);
         return productRepository.findById(id).map(p -> new CreateProductDto().getProductDto(p)).orElseThrow();
     }
 
 
-    public List<ProductDto> findAllProducts() {
+    public List<com.geekbrains.spring.web.dto.ProductDto> findAllProducts() {
         return productRepository.findAll().stream().map(p->new CreateProductDto().getProductDto(p)).collect(Collectors.toList());
+    }
+
+    public Product add(Product product) {
+        return productRepository.save(product);
+    }
+
+    public com.geekbrains.spring.web.dto.ProductDto updateProduct(com.geekbrains.spring.web.dto.ProductDto productDto) {
+        validator.validateOnUpdate(productDto,productRepository.findAll());
+        Product product = new CreateProductDto().getProduct(productDto);
+        Product product1= productRepository.save(product);
+        return new CreateProductDto().getProductDto(product1);
+    }
+
+    public com.geekbrains.spring.web.dto.ProductDto delete(Long id) {
+        validator.valideteById(id,productRepository.findAll());
+        productRepository.deleteById(id);
+        return findById(id);
+    }
+
+    public HashMap<ProductDto,Integer> putIntoCart(Long id) {
+        ProductDto productDto = findById(id);
+        cart.putInCart(productDto);
+        return cart.getProductCart();
+    }
+
+    public HashMap<ProductDto, Integer> deleteInCart(Long id) {
+        ProductDto productDto = findById(id);
+        cart.deleteOnCart(productDto);
+        return cart.getProductCart();
     }
 }

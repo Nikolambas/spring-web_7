@@ -1,7 +1,6 @@
 package com.geekbrains.spring.web.data;
 
 import lombok.AllArgsConstructor;
-import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
@@ -23,4 +22,8 @@ public class Product {
 
     private Integer cost;
 
+    public Product(String title, Integer cost) {
+        this.title=title;
+        this.cost=cost;
+    }
 }
